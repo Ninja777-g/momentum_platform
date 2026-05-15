@@ -8,10 +8,6 @@ import os
 RAW_DIR = "data/raw"
 
 def load_all_prices():
-    """
-    Reads every ticker CSV from data/raw/ and combines them
-    into one big table — rows = dates, columns = tickers.
-    """
     all_series = {}
 
     for filename in os.listdir(RAW_DIR):
@@ -19,6 +15,10 @@ def load_all_prices():
             continue
 
         ticker = filename.replace(".csv", "")
+
+        if ticker == "^CNX100":
+            continue
+
         filepath = os.path.join(RAW_DIR, filename)
 
         try:
@@ -28,7 +28,6 @@ def load_all_prices():
         except Exception as e:
             print(f"  Could not load {ticker}: {e}")
 
-    # Combine all into one DataFrame
     prices = pd.DataFrame(all_series)
     prices.sort_index(inplace=True)
 

@@ -143,7 +143,7 @@ def run_backtest():
             port_val = portfolio_cash
 
         # Benchmark value
-        bench_price = benchmark.get(date, np.nan)
+        bench_price = benchmark.loc[date] if date in benchmark.index else np.nan
         if pd.isna(bench_price):
             # Use last available benchmark price
             available_bench = benchmark[benchmark.index <= date]
