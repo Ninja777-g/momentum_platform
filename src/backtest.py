@@ -5,12 +5,13 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+from datetime import datetime, timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.momentum import load_all_prices, get_quarter_end_dates, compute_momentum_score, get_top20
 
 INITIAL_CAPITAL  = 1_000_000   # INR 10 Lakhs
-BACKTEST_START   = "2023-01-01"
+BACKTEST_START = (datetime.today() - timedelta(days=3 * 365)).strftime("%Y-%m-%d")
 BENCHMARK_TICKER = "^CNX100"
 
 def load_benchmark():
@@ -19,8 +20,12 @@ def load_benchmark():
     if not os.path.exists(path):
         print("Benchmark file not found. Downloading...")
         import yfinance as yf
-        data = yf.download("^CNX100", start="2022-01-01", end="2026-05-13",
-                           auto_adjust=True, progress=False)
+        end   = datetime.today()
+        start = end - timedelta(days=4 * 365 + 2)
+        data  = yf.download("^CNX100",
+                            start=start.strftime("%Y-%m-%d"),
+                            end=end.strftime("%Y-%m-%d"),
+                            auto_adjust=True, progress=False)
         s = data["Close"].dropna()
         s.to_csv(path, header=["close"])
         print(f"  ^CNX100: {len(s)} rows saved")
@@ -42,22 +47,18 @@ def run_backtest():
     print("=" * 55)
     print("BACKTESTING ENGINE")
     print("=" * 55)
-
     # ── Load data ──────────────────────────────────────────────────
     prices       = load_all_prices()
     benchmark    = load_benchmark()
     all_dates    = prices.index
     quarter_ends = get_quarter_end_dates(prices, BACKTEST_START)
-
     # ── Restrict to backtest period ────────────────────────────────
     backtest_dates = all_dates[all_dates >= BACKTEST_START]
-
     # ── Storage ────────────────────────────────────────────────────
     portfolio_values  = []   # daily strategy NAV
     benchmark_values  = []   # daily benchmark NAV
     holdings_log      = []   # quarterly holdings snapshots
     daily_dates       = []
-
     # ── Initialize ─────────────────────────────────────────────────
     portfolio_cash    = INITIAL_CAPITAL
     current_holdings  = {}   # {ticker: shares}

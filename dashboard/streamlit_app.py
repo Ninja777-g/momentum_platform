@@ -7,8 +7,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 import sys, os
+from datetime import datetime, timedelta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from src.backtest import run_backtest
 from src.metrics  import compute_all_metrics
 from src.momentum import load_all_prices, compute_momentum_score, get_top20
@@ -35,7 +35,6 @@ def load_prices():
 st.sidebar.title("📈 Momentum Platform")
 st.sidebar.markdown("NIFTY 100 | Risk-Adjusted Momentum")
 st.sidebar.markdown("---")
-
 page = st.sidebar.radio("Navigate", [
     "🏠 Overview",
     "📊 Performance",
@@ -43,13 +42,11 @@ page = st.sidebar.radio("Navigate", [
     "🔬 Statistics",
     "🔴 Live Portfolio"
 ])
-
 st.sidebar.markdown("---")
 st.sidebar.caption("Strategy: Top-20 Equal-Weight")
 st.sidebar.caption("Rebalance: Quarterly")
 st.sidebar.caption("Universe: NIFTY 100")
 st.sidebar.caption("Capital: ₹10,00,000")
-
 # ── Load everything ────────────────────────────────────────────────
 with st.spinner("Loading backtest data..."):
     results, holdings_log, metrics = load_data()
@@ -63,34 +60,28 @@ h = metrics["hypothesis_test"]
 # ══════════════════════════════════════════════════════════════════
 if page == "🏠 Overview":
     st.title("📈 Momentum Portfolio — Overview")
-    st.markdown("**Strategy:** Risk-Adjusted Momentum | **Universe:** NIFTY 100 | **Period:** Jan 2023 – May 2026")
+    start_date = (datetime.today() - timedelta(days=3 * 365)).strftime("%b %Y")
+    end_date   = datetime.today().strftime("%b %Y")
+    st.markdown(f"**Strategy:** Risk-Adjusted Momentum | **Universe:** NIFTY 100 | **Period:** {start_date} – {end_date}")
     st.markdown("---")
-
     # ── KPI Cards ─────────────────────────────────────────────────
     c1, c2, c3, c4, c5 = st.columns(5)
-
     c1.metric("Final Portfolio Value",
               f"₹{s['final_value']:,.0f}",
               f"+₹{s['final_value']-1_000_000:,.0f} from ₹10L")
-
     c2.metric("Strategy CAGR",
               f"{s['cagr']:.2%}",
               f"vs Benchmark {b['cagr']:.2%}")
-
     c3.metric("Sharpe Ratio",
               f"{s['sharpe']:.3f}",
               f"vs Benchmark {b['sharpe']:.3f}")
-
     c4.metric("Alpha (Excess CAGR)",
               f"{metrics['alpha']:.2%}")
-
     c5.metric("Max Drawdown",
               f"{s['max_drawdown']:.2%}",
               f"Benchmark {b['max_drawdown']:.2%}",
               delta_color="inverse")
-
     st.markdown("---")
-
     # ── Hypothesis test result banner ──────────────────────────────
     if h["reject_h0"]:
         st.success(f"✅ **Hypothesis Test: REJECT H0** — Strategy statistically outperforms the benchmark "
@@ -125,7 +116,6 @@ if page == "🏠 Overview":
 elif page == "📊 Performance":
     st.title("📊 Performance Analysis")
     st.markdown("---")
-
     # ── Chart 1: Cumulative value ──────────────────────────────────
     st.markdown("### Portfolio vs Benchmark")
     fig1 = go.Figure()
@@ -141,7 +131,6 @@ elif page == "📊 Performance":
     fig1.update_layout(height=400, xaxis_title="Date", yaxis_title="Value (₹)",
                        margin=dict(l=0,r=0,t=10,b=0))
     st.plotly_chart(fig1, use_container_width=True)
-
     col1, col2 = st.columns(2)
 
     # ── Chart 2: Drawdown ──────────────────────────────────────────
@@ -185,12 +174,10 @@ elif page == "📊 Performance":
     monthly_df.columns = ["date", "return"]
     monthly_df["year"] = monthly_df["date"].dt.year
     monthly_df["month"]= monthly_df["date"].dt.strftime("%b")
-
     pivot = monthly_df.pivot(index="year", columns="month", values="return")
     month_order = ["Jan","Feb","Mar","Apr","May","Jun",
                    "Jul","Aug","Sep","Oct","Nov","Dec"]
     pivot = pivot.reindex(columns=[m for m in month_order if m in pivot.columns])
-
     fig4 = px.imshow(
         pivot,
         color_continuous_scale="RdYlGn",
@@ -207,7 +194,6 @@ elif page == "📊 Performance":
 elif page == "📋 Holdings":
     st.title("📋 Quarterly Holdings")
     st.markdown("---")
-
     if not holdings_log:
         st.warning("No holdings data available.")
     else:
@@ -216,11 +202,9 @@ elif page == "📋 Holdings":
         selected = st.selectbox("Select Rebalance Quarter", quarters[::-1])
         idx      = len(quarters) - 1 - quarters[::-1].index(selected)
         entry    = holdings_log[idx]
-
         st.markdown(f"**Signal Date:** {entry['signal_date']}  |  "
                     f"**Execution Date:** {entry['rebalance_date']}")
         st.markdown("---")
-
         # Build holdings table
         rows = []
         for rank, ticker in enumerate(entry["holdings"], 1):
@@ -234,7 +218,6 @@ elif page == "📋 Holdings":
 
         df = pd.DataFrame(rows)
         st.dataframe(df, use_container_width=True, hide_index=True)
-
         # Turnover between quarters
         if idx > 0:
             prev   = set(holdings_log[idx-1]["holdings"])
@@ -252,9 +235,7 @@ elif page == "📋 Holdings":
 elif page == "🔬 Statistics":
     st.title("🔬 Statistical Analysis")
     st.markdown("---")
-
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown("### Full Metrics Comparison")
         comp = pd.DataFrame({
@@ -268,7 +249,6 @@ elif page == "🔬 Statistics":
                           f"{b['volatility']:.2%}", "—"]
         })
         st.dataframe(comp, use_container_width=True, hide_index=True)
-
     with col2:
         st.markdown("### Hypothesis Test Results")
         hyp_data = pd.DataFrame({
@@ -288,13 +268,11 @@ elif page == "🔬 Statistics":
             ]
         })
         st.dataframe(hyp_data, use_container_width=True, hide_index=True)
-
     # Monthly excess return distribution
     st.markdown("### Monthly Excess Return Distribution")
     port_m  = results["portfolio_return"].resample("ME").apply(lambda x: (1+x).prod()-1)
     bench_m = results["benchmark_return"].resample("ME").apply(lambda x: (1+x).prod()-1)
     excess  = (port_m - bench_m).dropna() * 100
-
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=excess, nbinsx=20, name="Monthly Excess Return",
                                marker_color="#00C896", opacity=0.75))
@@ -313,17 +291,14 @@ elif page == "🔴 Live Portfolio":
     st.markdown("> ⚠️ This is a **simulated forward signal** based on latest available data. "
                 "Not financial advice.")
     st.markdown("---")
-
     with st.spinner("Computing latest momentum scores..."):
         prices      = load_prices()
         latest_date = prices.index[-1]
         scores      = compute_momentum_score(prices, latest_date)
-
     if scores is not None:
         top20 = get_top20(scores)
         st.markdown(f"**Signal computed on:** {latest_date.date()}  |  "
                     f"**Stocks ranked:** {len(scores)}")
-
         rows = []
         for rank, (ticker, row) in enumerate(top20.iterrows(), 1):
             rows.append({
@@ -334,10 +309,8 @@ elif page == "🔴 Live Portfolio":
                 "Momentum Score"  : f"{row['score']:.3f}",
                 "Weight"          : "5.00%"
             })
-
         df = pd.DataFrame(rows)
         st.dataframe(df, use_container_width=True, hide_index=True)
-
         st.markdown("---")
         st.markdown("**Equal allocation per stock:** ₹50,000 (5% of ₹10,00,000)")
     else:

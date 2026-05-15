@@ -42,16 +42,12 @@ def run_hypothesis_test(strategy_monthly, benchmark_monthly):
         "strategy" : strategy_monthly,
         "benchmark": benchmark_monthly
     }).dropna()
-
     excess          = combined["strategy"] - combined["benchmark"]
     t_stat, p_value = stats.ttest_rel(combined["strategy"], combined["benchmark"])
-
     # One-tailed p-value (we care only about outperformance)
     p_one_tailed    = p_value / 2
-
     # Effect size (Cohen's d)
     cohens_d        = excess.mean() / excess.std()
-
     # 95% confidence interval on mean excess return
     ci              = stats.t.interval(
                         0.95,
@@ -59,7 +55,6 @@ def run_hypothesis_test(strategy_monthly, benchmark_monthly):
                         loc=excess.mean(),
                         scale=stats.sem(excess)
                       )
-
     return {
         "n_observations"  : len(excess),
         "mean_excess"     : excess.mean(),
@@ -79,37 +74,28 @@ def compute_all_metrics(results):
     """
     port  = results["portfolio_value"].dropna()
     bench = results["benchmark_value"].dropna()
-
     # Number of years
     years = len(port) / TRADING_DAYS
-
     # ── CAGR ───────────────────────────────────────────────────────
     port_cagr  = compute_cagr(port.iloc[0],  port.iloc[-1],  years)
     bench_cagr = compute_cagr(bench.iloc[0], bench.iloc[-1], years)
-
     # ── Sharpe ─────────────────────────────────────────────────────
     port_returns  = results["portfolio_return"].dropna()
     bench_returns = results["benchmark_return"].dropna()
-
     port_sharpe  = compute_sharpe(port_returns)
     bench_sharpe = compute_sharpe(bench_returns)
-
     # ── Max Drawdown ───────────────────────────────────────────────
     port_mdd  = compute_max_drawdown(port)
     bench_mdd = compute_max_drawdown(bench)
-
     # ── Alpha ──────────────────────────────────────────────────────
     alpha = port_cagr - bench_cagr
-
     # ── Volatility ─────────────────────────────────────────────────
     port_vol  = port_returns.std()  * np.sqrt(TRADING_DAYS)
     bench_vol = bench_returns.std() * np.sqrt(TRADING_DAYS)
-
     # ── Hypothesis Test ────────────────────────────────────────────
     port_monthly  = compute_monthly_returns(port)
     bench_monthly = compute_monthly_returns(bench)
     hyp           = run_hypothesis_test(port_monthly, bench_monthly)
-
     # ── Package everything ─────────────────────────────────────────
     metrics = {
         "strategy": {
@@ -129,7 +115,6 @@ def compute_all_metrics(results):
         "alpha"           : alpha,
         "hypothesis_test" : hyp
     }
-
     return metrics
 
 def print_metrics(metrics):
@@ -137,7 +122,6 @@ def print_metrics(metrics):
     s  = metrics["strategy"]
     b  = metrics["benchmark"]
     h  = metrics["hypothesis_test"]
-
     print(f"\n{'='*55}")
     print(f"  PERFORMANCE METRICS REPORT")
     print(f"{'='*55}")
@@ -159,20 +143,15 @@ def print_metrics(metrics):
     print(f"  {'Cohens_d':<22} {h['cohens_d']:>12.3f}")
     print(f"  {'95% CI':<22} [{h['ci_95_low']:>6.2%}, {h['ci_95_high']:>6.2%}]")
     print(f"  {'-'*46}")
-
     if h["reject_h0"]:
         print(f"  RESULT: REJECT H0 ✅ Strategy significantly outperforms!")
     else:
         print(f"  RESULT: FAIL TO REJECT H0 ❌ No significant outperformance")
-
     print(f"{'='*55}\n")
-
-
 if __name__ == "__main__":
     import os, sys
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from src.backtest import run_backtest
-
     results, _ = run_backtest()
     metrics    = compute_all_metrics(results)
     print_metrics(metrics)
